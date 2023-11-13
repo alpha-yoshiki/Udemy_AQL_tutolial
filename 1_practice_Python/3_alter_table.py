@@ -1,3 +1,5 @@
+# 3_alter_table.py
+
 import sqlite3
 import os
 
@@ -8,11 +10,8 @@ dbname = "sample.db"
 conn = sqlite3.connect(dbname)
 cur = conn.cursor()
 
-query = "CREATE TABLE items(\
-        item_id INTEGER PRIMARY KEY, \
-        item_name STRING, \
-        prince INTEGER\
-    )"
+# query = "ALTER TABLE items ADD quantity INTEGER"
+query = "ALTER TABLE items DROP quantity"
 
 cur.execute(query)
 conn.commit()
