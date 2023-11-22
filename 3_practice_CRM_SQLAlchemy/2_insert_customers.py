@@ -21,6 +21,12 @@ values = [
         "age": 21,
         "gender": '男'
     },
+    {
+        "customer_id": 'C010',
+        "customer_name": '斎藤M男',
+        "age": 2100,
+        "gender": '男'
+    },
 ]
 
 for value in values:
@@ -29,7 +35,7 @@ for value in values:
     conn = engine.connect()
     try:
         result = conn.execute(query)
-        if result.is_insert():
+        if result.is_insert:
             print("insert成功")
             print("inserted_primary_key{}".format(
                 result.inserted_primary_key[0]))
