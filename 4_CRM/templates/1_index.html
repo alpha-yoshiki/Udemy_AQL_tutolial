@@ -1,5 +1,29 @@
 {% extends "base.html" %} {% block content %}
 
+<p>【①現在登録中の顧客一覧】</p>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">顧客ID</th>
+      <th scope="col">顧客名</th>
+      <th scope="col">年齢</th>
+      <th scope="col">性別</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for customer in customers %}
+    <tr>
+      <th scope="row">{{ customer.customer_id }}</th>
+      <td>{{ customer.customer_name }}</td>
+      <td>{{ customer.age }}</td>
+      <td>{{ customer.gender }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<br />
+
 <p>【②顧客新規登録】</p>
 <form action="/add_customer" method="post">
   <div class="row mb-3">
@@ -70,4 +94,37 @@
   <button type="submit" class="btn btn-primary">登録</button>
 </form>
 
+<br />
+<br />
+
+<p>【③性別で顧客一覧から抽出】</p>
+<form action="/select_gender" method="post">
+  <fieldset class="row mb-3">
+    <legend class="col-form-label col-sm-2 pt-0">抽出する性別を選択</legend>
+    <div class="col-sm-10">
+      <div class="form-check">
+        <input
+          class="form-check-input"
+          type="radio"
+          name="input-gender2"
+          id="gender-male2"
+          value="男性"
+          checked
+        />
+        <label class="form-check-label" for="gender-male2"> 男性 </label>
+      </div>
+      <div class="form-check">
+        <input
+          class="form-check-input"
+          type="radio"
+          name="input-gender2"
+          id="gender-female2"
+          value="女性"
+        />
+        <label class="form-check-label" for="gender-female2"> 女性 </label>
+      </div>
+    </div>
+  </fieldset>
+  <button type="submit" class="btn btn-primary">抽出</button>
+</form>
 {% endblock content %}

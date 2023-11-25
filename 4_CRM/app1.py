@@ -1,20 +1,22 @@
-from flask import Flask, render_template, request
-from models import app, Customer, db
-from flask_sqlalchemy import SQLAlchemy
+from flask import render_template, request
+from models import app, db, Customer
+import sqlalchemy
 
-app = Flask(__name__)
+# ページ遷移
 
 
 @app.route("/")
 def index():
-    return render_template("1_index.html")
+    customers = Customer.query.all()
+    return render_template("1_index.html", customers=customers)
 
 
-@app.route("/item/")
+@app.route("/item")
 def item():
     return render_template("2_item.html")
 
 # 機能系
+# 1-1.顧客登録
 
 
 @app.route("/add_customer", methods=["POST"])
@@ -23,16 +25,22 @@ def add_customer():
     customer_name = request.form["input-customer-name"]
     age = request.form["input-age"]
     gender = request.form["input-gender"]
-
     customer = Customer(customer_id, customer_name, age, gender)
-    db.session.add(customer)
-    db.session.commit()
+    try:
+        db.session.add(customer)
+        db.session.commit()
+    except sqlalchemy.exc.IntegrityError:
+        return render_template("error.html")
+    return render_template("1-1_confirm_added_customer.html", customer=customer)
 
-    print(customer_id)
-    print(customer_name)
-    print(age)
-    print(gender)
-    return customer_id
+# 1-2.性別で抽出
+
+
+@app.route("/select_gender", methods=["POST"])
+def select_gender():
+    gender = request.form["input-gender2"]
+    customers = Customer.query.filter(Customer.gender == gender).all()
+    return render_template("1-2_result_select_gender.html", customers=customers)
 
 
 if __name__ == "__main__":
