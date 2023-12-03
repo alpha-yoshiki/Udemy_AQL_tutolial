@@ -1,8 +1,10 @@
+from collections import defaultdict
 from datetime import datetime
 
 from flask import render_template, request
 from models import app, db, Customer, Item, Purchase, Purchase_detail
 import sqlalchemy
+from sqlalchemy import func
 
 # ページ遷移
 
@@ -30,6 +32,29 @@ def purchase():
     customers = Customer.query.all()
     items = Item.query.all()
     return render_template("3_purchase.html", customers=customers, items=items)
+
+# 4. 購入情報検索/分析ページ
+
+
+@app.route("/purchase_data_statistice/")
+def purchase_data_statistice():
+    joined_purchase_details = db.session.query(Purchase, Purchase_detail).join(
+        Purchase_detail, Purchase.purchase_id == Purchase_detail.purchase_id).all()
+    joined_purchase_details = db.session.query(Purchase, Purchase_detail, Customer).join(
+        Purchase_detail, Purchase.purchase_id == Purchase_detail.purchase_id).join(
+            Customer, Purchase.customer_id == Customer.customer_id
+    ).all()
+    joined_purchase_details = db.session.query(
+        Purchase, Purchase_detail, Customer, Item
+    ).join(
+        Purchase_detail, Purchase.purchase_id == Purchase_detail.purchase_id).join(
+            Customer, Purchase.customer_id == Customer.customer_id
+    ).join(
+        Item, Purchase_detail.item_id == Item.item_id
+    ).all()
+
+    customers = Customer.query.all()
+    return render_template("4_purchase_data_statistice.html", joined_purchase_details=joined_purchase_details, customers=customers)
 
 
 # 機能系
@@ -197,6 +222,144 @@ def delete_purchase():
     except sqlalchemy.exc.IntegrityError:
         return render_template("error.html")
     return render_template("3-2_confirm_deleted_purchase.html", purchase=purchase)
+
+
+# 4-1. 購入情報検索
+
+@app.route("/search_purchase", methods=["POST"])
+def search_purchase():
+    item_name = request.form["input-item-name"]
+    customer_name = request.form["input-customer-name"]
+    date = request.form["input-date"]
+
+    if item_name:
+        search_target = "%{}%".format(item_name)
+        items = Item.query.filter(Item.item_name.like(search_target)).all()
+        # item_id_list = []
+        # for item in items:
+        #     item_id_list.append(item.item_id)
+        item_id_list = [item.item_id for item in items]
+    if customer_name:
+        customer = Customer.query.filter_by(
+            customer_name=customer_name).first()
+        customer_id = customer.customer_id
+    else:
+        customer = None
+    if date:
+        date = datetime.strptime(date, "%Y-%m-%d")
+
+    is_customer_or_date = True
+    if customer and date:
+        purchases = Purchase.query.filter(
+            Purchase.customer_id == customer_id, Purchase.date == date).all()
+    elif customer:
+        purchases = Purchase.query.filter(
+            Purchase.customer_id == customer_id).all()
+    elif date:
+        purchases = Purchase.query.filter(Purchase.date == date).all()
+    else:
+        is_customer_or_date = False
+
+    if is_customer_or_date:
+        # purchase_id_list = []
+        # for purchase in purchases:
+        #     purchase_id_list.append(purchase.purchase_id)
+        purchase_id_list = [purchase.purchase_id for purchase in purchases]
+
+    if is_customer_or_date and item_name:
+        purchase_details = Purchase_detail.query.filter(Purchase_detail.item_id.in_(
+            item_id_list), Purchase_detail.purchase_id.in_(purchase_id_list)).all()
+        return render_template("4-1_result_search_purchase.html", purchase_details=purchase_details)
+    elif is_customer_or_date:
+        purchase_details = Purchase_detail.query.filter(
+            Purchase_detail.purchase_id.in_(purchase_id_list)).all()
+        return render_template("4-1_result_search_purchase.html", purchase_details=purchase_details)
+    elif item_name:
+        purchase_details = Purchase_detail.query.filter(
+            Purchase_detail.item_id.in_(item_id_list)).all()
+        return render_template("4-1_result_search_purchase.html", purchase_details=purchase_details)
+    else:
+        return render_template("error.html")
+
+
+# 4-2. 総顧客数計算
+@app.route("/count_customer", methods=["POST"])
+def count_customer():
+    statistics_type = "総顧客数"
+    number_of_customers = db.session.query(
+        Customer).count()
+    result = f"{number_of_customers}人"
+
+    return render_template("4-2_relust_statistics.html", statistics_type=statistics_type, result=result)
+
+# 4-2. count_quantity
+
+
+@app.route("/count_quantity", methods=["POST"])
+def count_quantity():
+    statistics_type = "総販売商品数量"
+    total_quantity = db.session.query(
+        func.sum(Purchase_detail.quantity)).first()
+    result = f"{int(total_quantity[0])}個"
+
+    return render_template("4-2_relust_statistics.html", statistics_type=statistics_type, result=result)
+
+
+# 4-3. total_sales
+
+
+@app.route("/total_sales", methods=["POST"])
+def total_sales():
+    statistics_type = "総売上"
+
+    joined_table = db.session.query(
+        Purchase_detail.purchase_id, Item.price, Item.item_id, Purchase_detail.quantity
+    ).join(
+        Item, Purchase_detail.item_id == Item.item_id
+    ).all()
+    total_sales = 0
+    for each_purchase in joined_table:
+        if not each_purchase.quaintity:
+            continue
+        sale = each_purchase.price * each_purchase.quantity
+        total_sales += sale
+
+    result = f"{int(total_sales)}円"
+
+    return render_template("4-2_relust_statistics.html", statistics_type=statistics_type, result=result)
+
+# 4-4. ranking_items
+
+
+@app.route("/ranking_items", methods=["POST"])
+def ranking_items():
+    statistics_type = "販売数量商品別ランキング"
+
+    purchase_details = Purchase_detail.query.all()
+    item_count_dict = defaultdict(int)
+
+    for purchase_detail in purchase_details:
+        item_id = purchase_detail.item_id
+        quantity = purchase_detail.quantity
+        if quantity:
+            item_count_dict[item_id] += quantity
+
+    item_count_dict = sorted(
+        item_count_dict.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    items = []
+    for index, item_tuple in enumerate(item_count_dict):
+        item = list(item_tuple)
+        item_name = Item.query.filter_by(
+            item_id=item[0]
+        ).first().item_name
+        item.append(item_name)
+        item.append(f"{index+1}位")
+        items.append(item)
+    return render_template("4-3_relust_item_ranking.html", statistics_type=statistics_type, items=items)
 
 
 if __name__ == "__main__":

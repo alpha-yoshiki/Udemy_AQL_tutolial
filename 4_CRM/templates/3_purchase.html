@@ -100,4 +100,26 @@
   </div>
   <button type="submit" class="btn btn-primary">購入情報登録</button>
 </form>
+<br />
+<br />
+
+<p>【②購入情報の削除】</p>
+<form action="/delete_purchase" method="post">
+  <div class="row mb-3">
+    <label for="input-purchase-id" class="col-sm-2 col-form-label"
+      >削除する購入のID</label
+    >
+    <div class="col-sm-10">
+      <input
+        type="number"
+        class="form-control"
+        id="input-purchase-id"
+        name="input-purchase-id"
+      />
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">購入情報削除</button>
+</form>
+
 {% endblock content %}

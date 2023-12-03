@@ -1,0 +1,9 @@
+{% extends "base.html" %} {% block content %}
+
+<p>購入情報削除確認ページ</p>
+<p>以下の商品を削除しました</p>
+<p>購入ID: {{ purchase.purchase_id }}</p>
+<p>顧客名: {{ purchase.customer_id }}</p>
+<p>日付: {{ purchase.date }}</p>
+
+{% endblock content %}
